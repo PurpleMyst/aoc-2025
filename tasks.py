@@ -1,7 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#     "argh==0.26.2",
+#     "typer==0.20.0",
 #     "beautifulsoup4==4.12.2",
 #     "browser_cookie3==0.16.2",
 #     "html2text==2020.1.16",
@@ -12,14 +12,16 @@
 #     "tomlkit==0.12.3",
 # ]
 # ///
+import re
 import shlex
 import subprocess
 import sys
 import typing as t
 import webbrowser
+from contextlib import chdir
 from datetime import datetime
 from functools import partial, wraps
-from os import chdir, environ, startfile
+from os import environ, startfile
 from pathlib import Path
 from uuid import uuid4
 
@@ -27,13 +29,46 @@ import browser_cookie3
 import html2text
 import requests
 import tomlkit as toml
-from argh import aliases, arg, dispatch_commands, named, wrap_errors
+import typer
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 from dotenv import load_dotenv
 from termcolor import colored as c
 
+
+class AliasGroup(typer.core.TyperGroup):
+    _CMD_SPLIT_P = re.compile(r" ?[,|] ?")
+
+    def get_command(self, ctx, cmd_name):
+        cmd_name = self._group_cmd_name(cmd_name)
+        return super().get_command(ctx, cmd_name)
+
+    def _group_cmd_name(self, default_name):
+        for cmd in self.commands.values():
+            name = cmd.name
+            if name and default_name in self._CMD_SPLIT_P.split(name):
+                return name
+        return default_name
+
+
+app = typer.Typer(cls=AliasGroup, context_settings={"help_option_names": ["-h", "--help"]})
 cb = partial(c, attrs=["bold"])
+
+
+def handle_errors(errors: t.Type[BaseException] | tuple[t.Type[BaseException], ...]):
+    def decorator(f):
+        @wraps(f)
+        def inner(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except errors as e:
+                print(cb(f"Error: {e}", "red"))
+                sys.exit(1)
+
+        return inner
+
+    return decorator
+
 
 MAIN = """\
 fn main() {{
@@ -52,26 +87,26 @@ pub fn solve() -> (impl Display, impl Display) {
 }\
 """
 
-DEFAULT_BASELINE = "previous"
-
 WORKSPACE_MANIFEST_PATH = Path(__file__).parent / "Cargo.toml"
 
 NOW = datetime.now()
-
-DAYS_LEFT = set(range(1, 26)) - {
-    int(p.name[len("day") :]) for p in Path(__file__).parent.glob("day*")
-}
-
 YEAR = toml.parse(WORKSPACE_MANIFEST_PATH.read_text()).get("metadata", {}).get("year", NOW.year)
 
 load_dotenv()
 
-session = requests.Session()
-if "SESSION_COOKIE" in environ:
-    session.cookies.update({"session": environ["SESSION_COOKIE"]})
-else:
-    session.cookies.update(browser_cookie3.firefox(domain_name="adventofcode.com"))
-session.headers.update({"User-Agent": "PurpleMyst/aoc-template with much love! <3"})
+
+def _build_session() -> requests.Session:
+    session = requests.Session()
+    if "SESSION_COOKIE" in environ:
+        session.cookies.update({"session": environ["SESSION_COOKIE"]})
+    else:
+        session.cookies.update(browser_cookie3.firefox(domain_name="adventofcode.com"))
+    # TODO: more identifying user-agent
+    session.headers.update({"User-Agent": "PurpleMyst/aoc-template with much love! <3"})
+    return session
+
+
+session = _build_session()
 
 
 def run(cmd: t.Sequence[str | Path], /, **kwargs) -> subprocess.CompletedProcess:
@@ -92,7 +127,7 @@ def add_line(p: Path, l: str) -> None:
     ls = p.read_text().splitlines()
     ls.insert(-1, l)
     if ls[-1] != "":
-        # add or keep trailing newline
+        # Add or keep trailing newline
         ls.append("")
     p.write_text("\n".join(ls), newline="\n")
 
@@ -100,30 +135,52 @@ def add_line(p: Path, l: str) -> None:
 def in_root_dir(f):
     @wraps(f)
     def inner(*args, **kwargs):
-        chdir(Path(__file__).parent)
-        return f(*args, **kwargs)
+        with chdir(Path(__file__).parent):
+            return f(*args, **kwargs)
 
     return inner
 
 
-@wrap_errors((requests.HTTPError,))
+def find_next_day() -> int | None:
+    existing_days = []
+    for path in Path().glob("day*"):
+        if path.name.startswith("day") and path.name[3:].isdigit():
+            existing_days.append(int(path.name[3:]))
+    next_day = 1
+    while next_day in existing_days:
+        next_day += 1
+    if next_day > 25:
+        return None
+    return next_day
+
+
+@app.command("refetch_inputs")
+@handle_errors((requests.HTTPError,))
 def refetch_inputs() -> None:
-    "Fetch the inputs that aren't present locally, since they cannot be stored in the repo."
+    "Fetch the inputs that aren't present locally."
     for day in Path(__file__).parent.glob("day*"):
         input_path = day / "src" / "input.txt"
         if input_path.exists():
             continue
         day_num = int(day.name.removeprefix("day"))
+        print(f"Fetching input for day {day_num}...")
         resp = session.get(f"https://adventofcode.com/{YEAR}/day/{day_num}/input")
         resp.raise_for_status()
         input_path.write_text(resp.text, newline="\n")
 
 
-@arg("-d", "--day", choices=DAYS_LEFT, default=min(DAYS_LEFT, default=0), required=False)
-@aliases("ss")
-@wrap_errors((requests.HTTPError,))
-def start_solve(day: int = min(DAYS_LEFT, default=0)) -> None:
-    "Start solving a day, by default today."
+@app.command("start_solve | ss")
+@handle_errors((requests.HTTPError,))
+@in_root_dir
+def start_solve(day: int | None = None) -> None:
+    "Start solving a day. Defaults to the next available day."
+
+    if day is None:
+        day = find_next_day()
+        if day is None:
+            print(cb("All 25 days already exist!", "red"))
+            return
+
     crate = f"day{day:02}"
     crate_path = Path(crate)
 
@@ -173,10 +230,34 @@ def start_solve(day: int = min(DAYS_LEFT, default=0)) -> None:
     webbrowser.open_new(f"https://adventofcode.com/{YEAR}/day/{day}")
 
 
-@aliases("sb")
+def _is_dirty(*, ignore_untracked_files: bool = True) -> bool:
+    return (run(
+        ("git", "status", "--porcelain", "--untracked-files=no")
+        if ignore_untracked_files
+        else ("git", "status", "--porcelain")
+        , capture_output=True, text=True
+        ).stdout.strip()
+            != ""
+            )
+@app.command("set_baseline | sb")
 @in_root_dir
-def set_baseline(day: str, name: str = DEFAULT_BASELINE) -> None:
-    "Run a criterion benchmark, setting its results as the new baseline."
+def set_baseline(day: t.Annotated[str, typer.Argument()]) -> None:
+    "Run a criterion benchmark, setting its results as the new baseline (using Git hash)."
+
+    if _is_dirty():
+        print(
+            cb(
+                "You have uncommitted changes. Please commit or stash before setting a baseline.",
+                "red",
+            )
+        )
+        sys.exit(1)
+
+    # Use Git hash as baseline name
+    name = run(
+        ("git", "rev-parse", "--short", "HEAD"), capture_output=True, text=True
+    ).stdout.strip()
+
     run(
         (
             "cargo",
@@ -192,10 +273,22 @@ def set_baseline(day: str, name: str = DEFAULT_BASELINE) -> None:
     )
 
 
-@aliases("cmp")
+@app.command("compare | cmp")
 @in_root_dir
-def compare(day: str, name: str = DEFAULT_BASELINE) -> None:
-    "Run a criterion benchmark, comparing its results to the saved baseline."
+def compare(day: t.Annotated[str, typer.Argument()]) -> None:
+    "Compare benchmark results. (Dirty -> compare vs HEAD; Clean -> compare HEAD vs HEAD~1)."
+
+    if _is_dirty(ignore_untracked_files=False):
+        print(cb("Dirty state detected: Comparing current changes against HEAD.", "yellow"))
+        name = run(
+            ("git", "rev-parse", "--short", "HEAD"), capture_output=True, text=True
+        ).stdout.strip()
+    else:
+        print(cb("Clean state detected: Comparing HEAD against HEAD~1.", "green"))
+        name = run(
+            ("git", "rev-parse", "--short", "HEAD~1"), capture_output=True, text=True
+        ).stdout.strip()
+
     run(
         (
             "cargo",
@@ -211,58 +304,44 @@ def compare(day: str, name: str = DEFAULT_BASELINE) -> None:
     )
 
 
+@app.command("compare_by_stashing | cmp-stash")
 @in_root_dir
-@aliases("cmp-stash")
-def compare_by_stashing(day: str, name: str = DEFAULT_BASELINE) -> None:
-    "Stash the current changes, set the baseline and then compare the new changes."
+def compare_by_stashing(day: t.Annotated[str, typer.Argument()]) -> None:
+    "Stash current changes, set baseline, pop stash, then compare."
+    if not _is_dirty(ignore_untracked_files=False):
+        print(cb("Repository is clean; no need to stash.", "green"))
+        compare(day)
+        return
+
+    if not _is_dirty():
+        print(cb("No changes to tracked files; stashing would be a no-op.", "yellow"))
+        return
+
     run(("git", "stash", "push", "-m", "Stashing for benchmarking"))
-    set_baseline(day, name)
+    # We recursively call set_baseline here; careful as it checks for dirty state,
+    # but we just stashed, so it should be clean.
+    set_baseline(day)
     run(("git", "stash", "pop"))
-    compare(day, name)
+    compare(day)
 
 
+@app.command()
 @in_root_dir
 def criterion(day: str) -> None:
-    "Run a criterion benchmark, without caring about baselines."
+    "Run a criterion benchmark without baselines."
     run(("cargo", "bench", "--bench", "criterion", "--", day, "--verbose"))
 
 
+@app.command()
 @in_root_dir
 def iai() -> None:
     "Run the iai benchmark."
     run(("cargo", "bench", "--bench", "iai"))
 
 
-@aliases("wr")
-def watch_run() -> None:
-    "Run the solution everytime it changes."
-    del environ["RUSTFLAGS"]
-    run(("cargo", "watch", "--clear", "--exec", "run"))
 
-
-@aliases("r")
-@named("run")
-def do_run() -> None:
-    "Run the solution in debug mode."
-    del environ["RUSTFLAGS"]
-    run(("cargo", "run"))
-
-
-@aliases("rr")
-def run_release() -> None:
-    "Run the solution, in release mode."
-    run(("cargo", "run", "--release"))
-
-
-@aliases("rp")
-def run_prototype() -> None:
-    "Run a python file named prototype.py everytime something changes."
-    run(("cargo", "watch", "--clear", "--shell", "python3 prototype.py"))
-
-
-@arg("level", help="Which part to submit.", choices=(1, 2))
-@aliases("a")
-@wrap_errors((requests.HTTPError, AssertionError))
+@app.command("answer | a")
+@handle_errors((requests.HTTPError, AssertionError))
 def answer(answer: str, level: int) -> None:
     "Submit your answer!"
 
@@ -299,13 +378,14 @@ def fetch_problem(year, day) -> None:
     Path(f"day{day:02}", "problem.md").write_text(t, newline="\n")
 
 
+@app.command()
 def show_session_cookie() -> None:
     "Conquer outer space."
     print(c("Your session cookie:", "yellow"), session.cookies["session"])
 
 
+@app.command("measure_completion_time | mct")
 @in_root_dir
-@aliases("mct")
 def measure_completion_time() -> None:
     "Measure completion time for all days."
     from tabulate import tabulate
@@ -317,17 +397,16 @@ def measure_completion_time() -> None:
         day_metadata = manifest["workspace"].get("metadata", {}).get(day.name, {})  # type: ignore
         start_time = day_metadata.get("start_time")
         end_time = day_metadata.get("completion_time")
-        src = day / "src"
-        if start_time is None:
-            start_time = datetime.fromtimestamp((src / "input.txt").stat().st_ctime)
-        if end_time is None:
-            end_time = datetime.fromtimestamp(max(f.stat().st_mtime for f in src.glob("**/*.rs")))
-        completion_time = end_time - start_time
+        if start_time is None or end_time is None:
+            print(cb(f"Day {day.name} is missing start or end time.", "yellow"))
+            completion_time = "N/A"
+        else:
+            completion_time = end_time - start_time
         table.append((day.name, str(completion_time)))
     print(tabulate(table, headers=["Day", "Completion Time"], tablefmt="fancy_grid"))
 
 
-@aliases("sct")
+@app.command("set_completion_time | sct")
 def set_completion_time() -> None:
     "Set the completion time for the day you're currently in."
 
@@ -344,8 +423,9 @@ def set_completion_time() -> None:
         toml.dump(manifest, manifest_f)
 
 
+@app.command()
 @in_root_dir
-def flamegraph(day: str, *, remote="linode") -> None:
+def flamegraph(day: str, remote: str = "linode") -> None:
     "Run a flamegraph benchmark on a remote."
     import tarfile
     import tempfile
@@ -354,7 +434,7 @@ def flamegraph(day: str, *, remote="linode") -> None:
 
     console = Console()
 
-    def filter(info):
+    def filter_tar(info):
         if any(s in info.name for s in (".git", "target")):
             console.log(f"{info.name!r} [red]skipped.[/red]")
             return None
@@ -367,7 +447,7 @@ def flamegraph(day: str, *, remote="linode") -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         archive_path = Path(tmpdir, archive_name)
         with console.status("Compressing..."), tarfile.open(archive_path, "w:gz") as tar:
-            tar.add(".", filter=filter)
+            tar.add(".", filter=filter_tar)
 
         # Upload it to the remote via scp and untar it.
         run(("scp", "-C", archive_path, f"{remote}:/tmp/{archive_name}"))
@@ -403,28 +483,8 @@ def flamegraph(day: str, *, remote="linode") -> None:
 
 
 def main() -> None:
-    # environ["RUST_BACKTRACE"] = "1"
     environ["RUSTFLAGS"] = "-C target-cpu=native"
-    dispatch_commands(
-        (
-            start_solve,
-            answer,
-            set_baseline,
-            compare,
-            compare_by_stashing,
-            criterion,
-            iai,
-            watch_run,
-            do_run,
-            run_release,
-            run_prototype,
-            show_session_cookie,
-            measure_completion_time,
-            set_completion_time,
-            flamegraph,
-            refetch_inputs,
-        ),
-    )
+    app()
 
 
 if __name__ == "__main__":
