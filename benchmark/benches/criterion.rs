@@ -27,4 +27,5 @@ macro_rules! doit {
 }
 
 doit!(
+    day01,
 );
