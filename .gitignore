@@ -5,3 +5,5 @@ sample_input*.txt
 *.dot
 *.log
 .z3-trace
+input.txt
+problem.md
