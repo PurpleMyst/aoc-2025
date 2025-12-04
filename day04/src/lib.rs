@@ -5,7 +5,7 @@ pub fn solve() -> (impl Display, impl Display) {
     let input = include_str!("input.txt");
 
     let width = input.lines().next().unwrap().trim().len();
-    let mut map = grid::Grid::from_vec(
+    let map = grid::Grid::from_vec(
         input
             .bytes()
             .filter(|b| !b.is_ascii_whitespace())
@@ -14,36 +14,42 @@ pub fn solve() -> (impl Display, impl Display) {
         width,
     );
 
+    let mut neighbors = grid::Grid::new(map.rows(), map.cols());
+    for ((y, x), &cell) in map.indexed_iter() {
+        if !cell {
+            neighbors[(y, x)] = u8::MAX;
+            continue;
+        }
+
+        let mut cur_neighbors = 0;
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
+
+                let ny = y.wrapping_add_signed(dy);
+                let nx = x.wrapping_add_signed(dx);
+                if map.get(ny, nx) == Some(&true) {
+                    cur_neighbors += 1;
+                }
+            }
+        }
+
+        neighbors[(y, x)] = cur_neighbors;
+    }
+
     let mut part1 = None;
     let mut part2 = 0usize;
 
     let mut to_remove = Vec::new();
 
     loop {
-        for ((y, x), &cell) in map.indexed_iter() {
-            if !cell {
-                continue;
-            }
-
-            let mut neighbors = 0;
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    if dx == 0 && dy == 0 {
-                        continue;
-                    }
-
-                    let ny = y.wrapping_add_signed(dy);
-                    let nx = x.wrapping_add_signed(dx);
-                    if map.get(ny, nx) == Some(&true) {
-                        neighbors += 1;
-                    }
-                }
-            }
-
-            if neighbors < 4 {
-                to_remove.push((y, x));
-            }
-        }
+        to_remove.extend(
+            neighbors
+                .indexed_iter()
+                .filter_map(|((y, x), n)| (*n < 4).then_some((y, x)))
+        );
 
         if to_remove.is_empty() {
             break;
@@ -53,7 +59,20 @@ pub fn solve() -> (impl Display, impl Display) {
         part2 += to_remove.len();
 
         for (y, x) in to_remove.drain(..) {
-            map[(y, x)] = false;
+            neighbors[(y, x)] = u8::MAX;
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
+
+                    let ny = y.wrapping_add_signed(dy);
+                    let nx = x.wrapping_add_signed(dx);
+                    if let Some(n) = neighbors.get_mut(ny, nx) {
+                        *n -= 1;
+                    }
+                }
+            }
         }
     }
 
