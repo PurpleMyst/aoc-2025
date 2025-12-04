@@ -21,12 +21,18 @@ pub fn solve() -> (impl Display, impl Display) {
     let mut part2 = 0usize;
     for delta in instrs {
         for _ in 0..delta.abs() {
-            pos = (pos + delta.signum()).rem_euclid(100);
+            pos += delta.signum();
+            if pos == -1 {
+                pos = 99;
+            } else if pos == 100 {
+                pos = 0;
+            }
 
             if pos == 0 {
                 part2 += 1;
             }
         }
+
         if pos == 0 {
             part1 += 1;
         }
