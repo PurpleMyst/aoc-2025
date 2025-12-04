@@ -154,7 +154,7 @@ def find_next_day() -> int | None:
     return next_day
 
 
-@app.command("refetch_inputs")
+@app.command("refetch-inputs")
 @handle_errors((requests.HTTPError,))
 def refetch_inputs() -> None:
     "Fetch the inputs that aren't present locally."
@@ -169,7 +169,7 @@ def refetch_inputs() -> None:
         input_path.write_text(resp.text, newline="\n")
 
 
-@app.command("start_solve | ss")
+@app.command("start-solve | ss")
 @handle_errors((requests.HTTPError,))
 @in_root_dir
 def start_solve(day: int | None = None) -> None:
@@ -239,9 +239,9 @@ def _is_dirty(*, ignore_untracked_files: bool = True) -> bool:
         ).stdout.strip()
             != ""
             )
-@app.command("set_baseline | sb")
+@app.command("set-baseline | sb")
 @in_root_dir
-def set_baseline(day: t.Annotated[str, typer.Argument()]) -> None:
+def set_baseline(day: t.Annotated[str, typer.Argument()] = ".") -> None:
     "Run a criterion benchmark, setting its results as the new baseline (using Git hash)."
 
     if _is_dirty():
@@ -304,7 +304,7 @@ def compare(day: t.Annotated[str, typer.Argument()]) -> None:
     )
 
 
-@app.command("compare_by_stashing | cmp-stash")
+@app.command("compare-by-stashing | cmp-stash")
 @in_root_dir
 def compare_by_stashing(day: t.Annotated[str, typer.Argument()]) -> None:
     "Stash current changes, set baseline, pop stash, then compare."
@@ -384,7 +384,7 @@ def show_session_cookie() -> None:
     print(c("Your session cookie:", "yellow"), session.cookies["session"])
 
 
-@app.command("measure_completion_time | mct")
+@app.command("measure-completion-time | mct")
 @in_root_dir
 def measure_completion_time() -> None:
     "Measure completion time for all days."
@@ -406,7 +406,7 @@ def measure_completion_time() -> None:
     print(tabulate(table, headers=["Day", "Completion Time"], tablefmt="fancy_grid"))
 
 
-@app.command("set_completion_time | sct")
+@app.command("set-completion-time | sct")
 def set_completion_time() -> None:
     "Set the completion time for the day you're currently in."
 
