@@ -39,43 +39,36 @@ pub fn solve() -> (impl Display, impl Display) {
         neighbors[(y, x)] = cur_neighbors;
     }
 
-    let mut part1 = None;
+    let part1 = neighbors.iter().filter(|&&n| n < 4).count();
+
     let mut part2 = 0usize;
 
-    let mut to_remove = Vec::new();
+    let mut to_remove = neighbors
+        .indexed_iter()
+        .filter_map(|((y, x), n)| (*n < 4).then_some((y, x)))
+        .collect::<Vec<_>>();
 
-    loop {
-        to_remove.extend(
-            neighbors
-                .indexed_iter()
-                .filter_map(|((y, x), n)| (*n < 4).then_some((y, x)))
-        );
+    while let Some((y, x)) = to_remove.pop() {
+        neighbors[(y, x)] = u8::MAX;
+        part2 += 1;
 
-        if to_remove.is_empty() {
-            break;
-        }
+        for dy in -1..=1 {
+            for dx in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
 
-        part1.get_or_insert(to_remove.len());
-        part2 += to_remove.len();
-
-        for (y, x) in to_remove.drain(..) {
-            neighbors[(y, x)] = u8::MAX;
-            for dy in -1..=1 {
-                for dx in -1..=1 {
-                    if dx == 0 && dy == 0 {
-                        continue;
-                    }
-
-                    let ny = y.wrapping_add_signed(dy);
-                    let nx = x.wrapping_add_signed(dx);
-                    if let Some(n) = neighbors.get_mut(ny, nx) {
-                        *n -= 1;
+                let ny = y.wrapping_add_signed(dy);
+                let nx = x.wrapping_add_signed(dx);
+                if let Some(n) = neighbors.get_mut(ny, nx) {
+                    *n -= 1;
+                    if *n == 3 {
+                        to_remove.push((ny, nx));
                     }
                 }
             }
         }
     }
 
-    (part1.unwrap_or_default(), part2)
+    (part1, part2)
 }
-
