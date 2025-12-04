@@ -34,4 +34,3 @@ pub fn solve() -> (impl Display, impl Display) {
 
     (part1, part2)
 }
-

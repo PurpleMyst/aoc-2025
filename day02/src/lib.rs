@@ -70,4 +70,3 @@ mod tests {
         assert_eq!((1188511880..=1188511890).filter(|&n| !is_valid_id_for_p2(n)).count(), 1);
     }
 }
-

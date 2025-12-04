@@ -5,6 +5,7 @@ macro_rules! doit {
     };
 }
 
+#[rustfmt::skip]
 doit!(
     day01: day01_solve,
     day02: day02_solve,
