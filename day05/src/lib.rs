@@ -20,26 +20,23 @@ pub fn solve() -> (impl Display, impl Display) {
 
     ranges.sort_unstable();
 
-    'outer: loop {
-        for i in 0..ranges.len() - 1 {
-            let [a, b] = ranges.get_disjoint_mut([i, i + 1]).unwrap();
-            debug_assert!(a.0 <= b.0);
-
-            if a.0 == b.0 {
-                a.1 = a.1.max(b.1);
-                ranges.remove(i + 1);
-                continue 'outer;
-            }
-
-            if a.1 >= b.0 {
-                b.1 = a.1.max(b.1);
-                a.1 = b.0 - 1;
-            }
+    let mut prev = ranges[0];
+    let mut part2 = 0;
+    for mut next in ranges.into_iter().skip(1) {
+        if prev.1 >= next.0 {
+            next.1 = next.1.max(prev.1);
+            prev.1 = next.0 - 1;
         }
-        break;
+
+        if prev.0 <= prev.1 {
+            part2 += prev.1 - prev.0 + 1;
+        }
+
+        prev = next;
     }
-    let part2 = ranges.into_iter().map(|(a, b)| b - a + 1).sum::<u64>();
+    if prev.0 <= prev.1 {
+        part2 += prev.1 - prev.0 + 1;
+    }
 
     (part1, part2)
 }
-
