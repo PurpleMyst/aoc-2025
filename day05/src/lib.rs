@@ -15,7 +15,7 @@ pub fn solve() -> (impl Display, impl Display) {
     let part1 = tests
         .lines()
         .map(|s| s.parse::<u64>().unwrap())
-        .filter(|n| ranges.iter().any(|&(start, end)| (start..=end).contains(&n)))
+        .filter(|&n| ranges.iter().any(|&(start, end)| n >= start && n <= end))
         .count();
 
     ranges.sort_unstable();
