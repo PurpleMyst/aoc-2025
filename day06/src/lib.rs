@@ -38,11 +38,12 @@ fn solve_part2(input: &'static str) -> u64 {
     let width = input.lines().map(|line| line.len()).max().unwrap();
     let height = input.lines().count();
 
-    let lines: Vec<Vec<u8>> = input.lines().map(|line| line.bytes().collect()).collect();
+    let binput = input.as_bytes();
+    let get = |y: usize, x: usize| binput[y * (width + 1) + x];
 
     let mut dividers = Vec::new();
     for x in 0..width {
-        if (0..height).all(|y| lines[y][x] == b' ') {
+        if (0..height).all(|y| get(y, x) == b' ') {
             dividers.push(x);
         }
     }
@@ -51,7 +52,7 @@ fn solve_part2(input: &'static str) -> u64 {
 
     let mut start = 0;
     for end in dividers {
-        let mul = lines[height - 1][start] == b'*';
+        let mul = get(height-1, start) == b'*';
         let mut result = if mul { 1 } else { 0 };
 
         for x in start..end {
@@ -60,7 +61,7 @@ fn solve_part2(input: &'static str) -> u64 {
             let mut mult = 0;
             for y in 0..height {
                 mult *= 10;
-                let cell = lines[y][x];
+                let cell = get(y, x);
                 if cell.is_ascii_digit() {
                     n *= mult;
                     n += (cell - b'0') as u64;
