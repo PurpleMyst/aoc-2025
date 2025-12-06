@@ -37,9 +37,8 @@ fn solve_part1(input: &'static str) -> u64 {
 }
 
 fn solve_part2(input: &'static str) -> u64 {
-    let width = input.lines().map(|line| line.len()).max().unwrap();
+    let width = input.lines().next().unwrap().len();
     let height = input.lines().count();
-
     let binput = input.as_bytes();
     let get = |y: usize, x: usize| binput[y * (width + 1) + x];
 
@@ -50,8 +49,8 @@ fn solve_part2(input: &'static str) -> u64 {
         }
     }
     dividers.push(width);
-    let mut part2 = 0;
 
+    let mut part2 = 0;
     let mut start = 0;
     for end in dividers {
         let mul = get(height-1, start) == b'*';
@@ -60,14 +59,11 @@ fn solve_part2(input: &'static str) -> u64 {
         for x in start..end {
             let mut n = 0;
 
-            let mut mult = 0;
-            for y in 0..height {
-                mult *= 10;
+            for y in 0..height - 1 {
                 let cell = get(y, x);
                 if cell.is_ascii_digit() {
-                    n *= mult;
+                    n *= 10;
                     n += (cell - b'0') as u64;
-                    mult = 1;
                 }
             }
             if mul {
