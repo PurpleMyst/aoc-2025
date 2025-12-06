@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use atoi::FromRadix10;
+
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
     let input = include_str!("input.txt");
@@ -22,7 +24,7 @@ fn solve_part1(input: &'static str) -> u64 {
         let mut result = if mul { 1 } else { 0 };
 
         for y in 0..height - 1 {
-            let n = matrix[y][x].parse::<u64>().unwrap();
+            let n = u64::from_radix_10(matrix[y][x].as_bytes()).0;
             if mul {
                 result *= n;
             } else {
