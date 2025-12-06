@@ -43,7 +43,7 @@ pub fn solve() -> (impl Display, impl Display) {
                     let (start, end) = line.split_once('-').unwrap();
                     let start = start.parse::<u64>().unwrap();
                     let end = end.parse::<u64>().unwrap();
-                    (start..=end).filter(|&n| !is_valid_id_for_p1(n)).sum::<u64>()
+                    (start..=end).into_par_iter().filter(|&n| !is_valid_id_for_p1(n)).sum::<u64>()
                 })
                 .sum::<u64>()
         },
@@ -55,7 +55,7 @@ pub fn solve() -> (impl Display, impl Display) {
                     let (start, end) = line.split_once('-').unwrap();
                     let start = start.parse::<u64>().unwrap();
                     let end = end.parse::<u64>().unwrap();
-                    (start..=end).filter(|&n| !is_valid_id_for_p2(n)).sum::<u64>()
+                    (start..=end).into_par_iter().filter(|&n| !is_valid_id_for_p2(n)).sum::<u64>()
                 })
                 .sum::<u64>()
         },
