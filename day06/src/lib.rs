@@ -5,11 +5,14 @@ pub fn solve() -> (impl Display, impl Display) {
     let input = include_str!("input.txt");
     let part1 = solve_part1(input);
     let part2 = solve_part2(input);
-    (part1,part2)
+    (part1, part2)
 }
 
 fn solve_part1(input: &'static str) -> u64 {
-    let matrix: Vec<Vec<&'static str>> = input.lines().map(|line| line.split_ascii_whitespace().collect()).collect();
+    let matrix: Vec<Vec<&'static str>> = input
+        .lines()
+        .map(|line| line.split_ascii_whitespace().collect())
+        .collect();
     let width = matrix[0].len();
     let height = matrix.len();
 
@@ -18,7 +21,7 @@ fn solve_part1(input: &'static str) -> u64 {
         let mul = matrix[height - 1][x] == "*";
         let mut result = if mul { 1 } else { 0 };
 
-        for y in 0..height-1 {
+        for y in 0..height - 1 {
             let n = matrix[y][x].parse::<u64>().unwrap();
             if mul {
                 result *= n;
@@ -44,12 +47,12 @@ fn solve_part2(input: &'static str) -> u64 {
         }
     }
     dividers.push(width);
-    let mut part2=0;
+    let mut part2 = 0;
 
     let mut start = 0;
     for end in dividers {
         let mul = lines[height - 1][start] == b'*';
-        let mut result = if mul { 1  } else { 0 };
+        let mut result = if mul { 1 } else { 0 };
 
         for x in start..end {
             let mut n = 0;
@@ -66,13 +69,11 @@ fn solve_part2(input: &'static str) -> u64 {
             }
             if mul {
                 result *= n;
-            }
-            else {
+            } else {
                 result += n;
             }
         }
         part2 += result;
-
 
         start = end + 1;
     }

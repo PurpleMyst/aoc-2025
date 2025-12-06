@@ -3,12 +3,11 @@ use std::fmt::Display;
 use rayon::prelude::*;
 
 fn is_valid_id_for_p1(n: u64) -> bool {
-    let l = n.ilog10()  + 1;
+    let l = n.ilog10() + 1;
     if l % 2 != 0 {
         return true;
     }
-    n % 10u64.pow(l/2 as u32)
-    != n / 10u64.pow(l/2 as u32)
+    n % 10u64.pow(l / 2 as u32) != n / 10u64.pow(l / 2 as u32)
 }
 
 fn is_valid_id_for_p2(n: u64) -> bool {
