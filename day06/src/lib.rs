@@ -53,7 +53,7 @@ fn solve_part2(input: &'static str) -> u64 {
     let mut part2 = 0;
     let mut start = 0;
     for end in dividers {
-        let mul = get(height-1, start) == b'*';
+        let mul = get(height - 1, start) == b'*';
         let mut result = if mul { 1 } else { 0 };
 
         for x in start..end {

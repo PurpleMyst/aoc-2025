@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
-use rayon::prelude::*;
 use atoi::FromRadix10;
+use rayon::prelude::*;
 
 fn is_valid_id_for_p1(n: u64) -> bool {
     let l = n.ilog10() + 1;
@@ -44,7 +44,10 @@ pub fn solve() -> (impl Display, impl Display) {
                     let (start, end) = line.split_once('-').unwrap();
                     let start = u64::from_radix_10(start.as_bytes()).0;
                     let end = u64::from_radix_10(end.as_bytes()).0;
-                    (start..=end).into_par_iter().filter(|&n| !is_valid_id_for_p1(n)).sum::<u64>()
+                    (start..=end)
+                        .into_par_iter()
+                        .filter(|&n| !is_valid_id_for_p1(n))
+                        .sum::<u64>()
                 })
                 .sum::<u64>()
         },
@@ -56,7 +59,10 @@ pub fn solve() -> (impl Display, impl Display) {
                     let (start, end) = line.split_once('-').unwrap();
                     let start = u64::from_radix_10(start.as_bytes()).0;
                     let end = u64::from_radix_10(end.as_bytes()).0;
-                    (start..=end).into_par_iter().filter(|&n| !is_valid_id_for_p2(n)).sum::<u64>()
+                    (start..=end)
+                        .into_par_iter()
+                        .filter(|&n| !is_valid_id_for_p2(n))
+                        .sum::<u64>()
                 })
                 .sum::<u64>()
         },
