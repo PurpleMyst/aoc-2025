@@ -4,6 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+fixedbitset = "0.5.7"
 grid = "1.0.0"
-memoize = "0.5.1"
-rustc-hash = "2.1.1"

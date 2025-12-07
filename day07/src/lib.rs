@@ -1,7 +1,7 @@
 use std::{fmt::Display, mem::swap};
 
+use fixedbitset::FixedBitSet;
 use grid::Grid;
-use rustc_hash::FxHashSet;
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
@@ -14,29 +14,28 @@ pub fn solve() -> (impl Display, impl Display) {
 }
 
 fn solve_part1(map: &Grid<u8>, start: (usize, usize)) -> i32 {
-    let mut beams = FxHashSet::default();
-    let mut new_beams = FxHashSet::default();
-    beams.insert(start);
+    debug_assert_eq!(start.0, 0);
     let mut part1 = 0;
-    while !beams.is_empty() {
-        for (y, x) in beams.drain() {
-            let new_y = y + 1;
-            if new_y == map.rows() {
-                continue;
-            }
-            if map[(new_y, x)] == b'^' {
+    let mut xs = FixedBitSet::with_capacity(map.cols());
+    let mut new_xs = FixedBitSet::with_capacity(map.cols());
+    xs.insert(start.1);
+    for y in 0..map.rows()-1 {
+        let next_y = y + 1;
+        for x in xs.ones() {
+            if map[(next_y, x)] == b'^' {
                 part1 += 1;
                 if x != 0 {
-                    new_beams.insert((new_y, x - 1));
+                    new_xs.insert(x - 1);
                 }
                 if x != map.cols() - 1 {
-                    new_beams.insert((new_y, x + 1));
+                    new_xs.insert(x + 1);
                 }
             } else {
-                new_beams.insert((new_y, x));
+                new_xs.insert(x);
             }
         }
-        swap(&mut beams, &mut new_beams);
+        xs.clear();
+        swap(&mut xs, &mut new_xs);
     }
     part1
 }
