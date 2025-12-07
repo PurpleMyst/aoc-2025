@@ -6,6 +6,8 @@ use rustc_hash::FxHashMap;
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
+    memoized_flush_solve_part2(); // for benchmarking purposes
+
     let input = include_str!("input.txt");
     let width = input.lines().next().unwrap().len();
     let map = Grid::from_vec(input.lines().flat_map(|l| l.bytes()).collect(), width);
