@@ -5,9 +5,10 @@ use grid::Grid;
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
+    // Assumption: odd-indexed rows (i.e. 1, 3, 5, ...) are empty
     let input = include_str!("input.txt");
     let width = input.lines().next().unwrap().len();
-    let map = Grid::from_vec(input.lines().flat_map(|l| l.bytes()).collect(), width);
+    let map = Grid::from_vec(input.lines().step_by(2).flat_map(|l| l.bytes()).collect(), width);
     let start = map.indexed_iter().find(|(_pos, cell)| **cell == b'S').unwrap().0;
 
     (solve_part1(&map, start), solve_part2(&map, start))
