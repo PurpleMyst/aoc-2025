@@ -1,0 +1,8 @@
+[package]
+name = "day07"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+grid = "1.0.0"
+memoize = "0.5.1"

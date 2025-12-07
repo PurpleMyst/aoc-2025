@@ -33,6 +33,7 @@ dependencies = [
  "day04",
  "day05",
  "day06",
+ "day07",
  "iai",
 ]
 
@@ -220,6 +221,14 @@ name = "day06"
 version = "0.1.0"
 dependencies = [
  "atoi",
+]
+
+[[package]]
+name = "day07"
+version = "0.1.0"
+dependencies = [
+ "grid",
+ "memoize",
 ]
 
 [[package]]
