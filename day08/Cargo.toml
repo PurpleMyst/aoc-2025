@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+atoi = "2.0.0"
 itertools = "0.14.0"
 rayon = "1.11.0"
 union-find = "0.4.3"

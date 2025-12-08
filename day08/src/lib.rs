@@ -1,27 +1,33 @@
 use std::fmt::Display;
 
 use itertools::Itertools;
-use rayon::prelude::*; // Import Rayon traits
+use rayon::prelude::*;
 use union_find::*;
+use atoi::FromRadix10;
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
     let input = include_str!("input.txt");
     let boxes = input
         .lines()
-        .map(|line| -> (i64, i64, i64) {
+        .map(|line| -> (u64, u64, u64) {
             line.split(',')
-                .map(|n| n.parse::<i64>().unwrap())
+                .map(|n| u64::from_radix_10(n.as_bytes()).0)
                 .collect_tuple()
                 .unwrap()
         })
         .collect_vec();
 
-    let mut edges = (0..boxes.len())
-        .tuple_combinations()
-        .collect::<Vec<_>>();
+    let mut edges = Vec::with_capacity(boxes.len() * (boxes.len() - 1) / 2);
+    
+    for i in 0..boxes.len() {
+        for j in (i + 1)..boxes.len() {
+            let d = dist(boxes[i], boxes[j]);
+            edges.push((d, i as u16, j as u16));
+        }
+    }
 
-    edges.par_sort_by_cached_key(|(i, j)| dist(boxes[*i], boxes[*j]));
+    edges.par_sort_unstable_by_key(|(d, _, _)| *d);
 
     let mut circuits = QuickUnionUf::<UnionBySize>::new(boxes.len());
     let mut part1 = 0;
@@ -40,12 +46,12 @@ pub fn solve() -> (impl Display, impl Display) {
         }
 
         // ↓ Returns true if the two elements were in different sets
-        if circuits.union(pair.0, pair.1) {
+        if circuits.union(pair.1 as usize, pair.2 as usize) {
             merges += 1;
         }
 
         if merges == boxes.len() - 1 {
-            part2 = boxes[pair.0].0 * boxes[pair.1].0;
+            part2 = boxes[pair.1 as usize].0 * boxes[pair.2 as usize].0;
             break;
         }
     }
@@ -53,6 +59,8 @@ pub fn solve() -> (impl Display, impl Display) {
     (part1, part2)
 }
 
-fn dist(a: (i64, i64, i64), b: (i64, i64, i64)) -> i64 {
-    (a.0 - b.0).pow(2) + (a.1 - b.1).pow(2) + (a.2 - b.2).pow(2)
+fn dist(a: (u64, u64, u64), b: (u64, u64, u64)) -> u64 {
+    a.0.abs_diff(b.0).pow(2)
+        + a.1.abs_diff(b.1).pow(2)
+        + a.2.abs_diff(b.2).pow(2)
 }
