@@ -16,10 +16,11 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 import typing as t
 import webbrowser
 from contextlib import chdir
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial, wraps
 from os import environ, startfile
 from pathlib import Path
@@ -230,15 +231,48 @@ def start_solve(day: int | None = None) -> None:
     webbrowser.open_new(f"https://adventofcode.com/{YEAR}/day/{day}")
 
 
+@app.command("wait-start | ws")
+def wait_start(day: int | None = None, hour: int = 6) -> None:
+    "Waits until the next 6AM (or specified hour) then calls start-solve."
+
+    now = datetime.now()
+    # Set target to today at the specified hour (default 6 AM)
+    target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+
+    # If 6 AM has already passed today, target 6 AM tomorrow
+    if target <= now:
+        target += timedelta(days=1)
+
+    delta = target - now
+    seconds_to_wait = delta.total_seconds()
+
+    print(cb(f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')}", "cyan"))
+    print(cb(f"Target time:  {target.strftime('%Y-%m-%d %H:%M:%S')}", "green"))
+    print(cb(f"Sleeping for: {delta}...", "yellow"))
+
+    try:
+        time.sleep(seconds_to_wait)
+        print(cb("\nWake up! Starting solve task...", "green"))
+        # Call the existing function directly
+        start_solve(day)
+    except KeyboardInterrupt:
+        print(cb("\nTimer cancelled.", "red"))
+        sys.exit(0)
+
+
 def _is_dirty(*, ignore_untracked_files: bool = True) -> bool:
-    return (run(
-        ("git", "status", "--porcelain", "--untracked-files=no")
-        if ignore_untracked_files
-        else ("git", "status", "--porcelain")
-        , capture_output=True, text=True
+    return (
+        run(
+            ("git", "status", "--porcelain", "--untracked-files=no")
+            if ignore_untracked_files
+            else ("git", "status", "--porcelain"),
+            capture_output=True,
+            text=True,
         ).stdout.strip()
-            != ""
-            )
+        != ""
+    )
+
+
 @app.command("set-baseline | sb")
 @in_root_dir
 def set_baseline(day: t.Annotated[str, typer.Argument()] = ".") -> None:
@@ -337,7 +371,6 @@ def criterion(day: str) -> None:
 def iai() -> None:
     "Run the iai benchmark."
     run(("cargo", "bench", "--bench", "iai"))
-
 
 
 @app.command("answer | a")
