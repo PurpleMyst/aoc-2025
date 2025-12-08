@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use itertools::Itertools;
+use rayon::prelude::*; // Import Rayon traits
 use union_find::*;
 
 #[inline]
@@ -16,18 +17,20 @@ pub fn solve() -> (impl Display, impl Display) {
         })
         .collect_vec();
 
+    let mut edges = boxes
+        .iter()
+        .enumerate()
+        .tuple_combinations()
+        .collect::<Vec<_>>();
+
+    edges.par_sort_unstable_by_key(|(a, b)| dist(*a.1, *b.1));
+
     let mut circuits = QuickUnionUf::<UnionBySize>::new(boxes.len());
     let mut part1 = 0;
     let mut part2 = 0;
     let mut merges = 0;
 
-    for (k, pair) in boxes
-        .iter()
-        .enumerate()
-        .tuple_combinations()
-        .sorted_unstable_by_key(|(a, b)| dist(*a.1, *b.1))
-        .enumerate()
-    {
+    for (k, pair) in edges.into_iter().enumerate() {
         if k == 1000 {
             let mut size = vec![0usize; boxes.len()];
             for i in 0..boxes.len() {
