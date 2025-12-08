@@ -237,7 +237,7 @@ def wait_start(day: int | None = None, hour: int = 6) -> None:
 
     now = datetime.now()
     # Set target to today at the specified hour (default 6 AM)
-    target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+    target = now.replace(hour=hour, minute=0, second=2, microsecond=0)
 
     # If 6 AM has already passed today, target 6 AM tomorrow
     if target <= now:
