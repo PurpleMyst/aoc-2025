@@ -17,13 +17,11 @@ pub fn solve() -> (impl Display, impl Display) {
         })
         .collect_vec();
 
-    let mut edges = boxes
-        .iter()
-        .enumerate()
+    let mut edges = (0..boxes.len())
         .tuple_combinations()
         .collect::<Vec<_>>();
 
-    edges.par_sort_unstable_by_key(|(a, b)| dist(*a.1, *b.1));
+    edges.par_sort_unstable_by_key(|(i, j)| dist(boxes[*i], boxes[*j]));
 
     let mut circuits = QuickUnionUf::<UnionBySize>::new(boxes.len());
     let mut part1 = 0;
@@ -41,14 +39,13 @@ pub fn solve() -> (impl Display, impl Display) {
             part1 = size[0] * size[1] * size[2];
         }
 
-        let i = pair.0.0;
-        let j = pair.1.0;
-        if circuits.union(i, j) {
+        // ↓ Returns true if the two elements were in different sets
+        if circuits.union(pair.0, pair.1) {
             merges += 1;
         }
 
         if merges == boxes.len() - 1 {
-            part2 = pair.0.1.0 * pair.1.1.0;
+            part2 = boxes[pair.0].0 * boxes[pair.1].0;
             break;
         }
     }
