@@ -4,6 +4,7 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use union_find::*;
 use atoi::FromRadix10;
+use wide::u64x4;
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
@@ -59,8 +60,24 @@ pub fn solve() -> (impl Display, impl Display) {
     (part1, part2)
 }
 
+#[inline(always)]
 fn dist(a: (u64, u64, u64), b: (u64, u64, u64)) -> u64 {
-    a.0.abs_diff(b.0).pow(2)
-        + a.1.abs_diff(b.1).pow(2)
-        + a.2.abs_diff(b.2).pow(2)
+    // 1. Convert tuples to SIMD vectors (Structure of Arrays)
+    // We pad the 4th lane with 0.
+    let a_vec = u64x4::from([a.0, a.1, a.2, 0]);
+    let b_vec = u64x4::from([b.0, b.1, b.2, 0]);
+
+    // 2. Compute difference
+    // Note: SIMD integer subtraction is usually wrapping. 
+    // In modular arithmetic, (a - b)^2 is mathematically valid 
+    // even if (a - b) wraps around, so we don't need explicit abs_diff logic.
+    let diff = a_vec - b_vec;
+
+    // 3. Square (Multiplication)
+    let squared = diff * diff;
+
+    // 4. Horizontal Sum
+    // We extract the array and sum it up to get the scalar result.
+    let arr: [u64; 4] = squared.into();
+    arr.into_iter().sum()
 }
