@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use itertools::Itertools;
+use union_find::*;
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
@@ -15,9 +16,10 @@ pub fn solve() -> (impl Display, impl Display) {
         })
         .collect_vec();
 
-    let mut circuits = (0..boxes.len()).collect_vec();
+    let mut circuits = QuickUnionUf::<UnionBySize>::new(boxes.len());
     let mut part1 = 0;
     let mut part2 = 0;
+    let mut merges = 0;
 
     for (k, pair) in boxes
         .iter()
@@ -28,8 +30,8 @@ pub fn solve() -> (impl Display, impl Display) {
     {
         if k == 1000 {
             let mut size = vec![0usize; boxes.len()];
-            for &c in &circuits {
-                size[c] += 1;
+            for i in 0..boxes.len() {
+                size[circuits.find(i)] += 1;
             }
             size.sort_unstable();
             size.reverse();
@@ -38,16 +40,11 @@ pub fn solve() -> (impl Display, impl Display) {
 
         let i = pair.0.0;
         let j = pair.1.0;
-        let orig_c_i = circuits[i];
-        let orig_c_j = circuits[j];
-        let new_c = orig_c_i.min(orig_c_j);
-        circuits.iter_mut().for_each(|d| {
-            if *d == orig_c_i || *d == orig_c_j {
-                *d = new_c
-            }
-        });
+        if circuits.union(i, j) {
+            merges += 1;
+        }
 
-        if circuits.iter().all(|&c| c == circuits[0]) {
+        if merges == boxes.len() - 1 {
             part2 = pair.0.1.0 * pair.1.1.0;
             break;
         }
