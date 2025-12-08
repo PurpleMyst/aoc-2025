@@ -21,7 +21,7 @@ pub fn solve() -> (impl Display, impl Display) {
         .tuple_combinations()
         .collect::<Vec<_>>();
 
-    edges.par_sort_unstable_by_key(|(i, j)| dist(boxes[*i], boxes[*j]));
+    edges.par_sort_by_cached_key(|(i, j)| dist(boxes[*i], boxes[*j]));
 
     let mut circuits = QuickUnionUf::<UnionBySize>::new(boxes.len());
     let mut part1 = 0;
