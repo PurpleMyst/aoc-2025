@@ -41,12 +41,10 @@ fn sum_repeated_in_range_p1(lower: u64, upper: u64) -> u64 {
             continue;
         }
 
-        for k in k_lo..=k_hi {
-            let n = k * f;
-            if n >= lower && n <= upper {
-                result += n as u64;
-            }
-        }
+        result += ((k_lo * f).max(lower)..=(k_hi * f).min(upper))
+            .step_by(f as usize)
+            .map(|n| n as u64)
+            .sum::<u64>();
     }
 
     result
@@ -56,8 +54,8 @@ fn sum_repeated_in_range_p2(lower: u64, upper: u64) -> u64 {
     let max_total_digits = digits(upper);
     let mut candidates: Vec<u64> = Vec::new();
 
-    let lower128 = lower as u128;
-    let upper128 = upper as u128;
+    let lower = lower as u128;
+    let upper = upper as u128;
 
     // d is the number of digits in the repeated block, r is the number of blocks
     for d in 1..=max_total_digits {
@@ -68,26 +66,25 @@ fn sum_repeated_in_range_p2(lower: u64, upper: u64) -> u64 {
 
             let f = (pow10_dr - 1) / (pow10_d - 1);
 
-            if f > upper128 {
+            if f > upper {
                 continue; // even k = 1 would be too big
             }
 
             let min_k128 = 10u128.pow((d - 1) as u32);
             let max_k128 = pow10_d - 1;
 
-            let k_lo = ((lower128 + f - 1) / f).max(min_k128);
-            let k_hi = (upper128 / f).min(max_k128);
+            let k_lo = ((lower + f - 1) / f).max(min_k128);
+            let k_hi = (upper / f).min(max_k128);
 
             if k_lo > k_hi {
                 continue;
             }
 
-            for k in k_lo..=k_hi {
-                let n = k * f;
-                if n >= lower128 && n <= upper128 {
-                    candidates.push(n as u64);
-                }
-            }
+            candidates.extend(
+                ((k_lo * f).max(lower)..=(k_hi * f).min(upper))
+                    .step_by(f as usize)
+                    .map(|n| n as u64),
+            );
         }
     }
 
@@ -95,7 +92,6 @@ fn sum_repeated_in_range_p2(lower: u64, upper: u64) -> u64 {
     candidates.dedup();
     candidates.into_iter().sum::<u64>()
 }
-
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
