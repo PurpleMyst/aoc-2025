@@ -2,8 +2,17 @@ use std::fmt::Display;
 
 use atoi::FromRadix10;
 use itertools::Itertools;
+use rayon::prelude::*;
 use union_find::*;
 use wide::u64x4;
+
+/// Assumption: the input is well-behaved enough that we can "draw the line" at a certain distance
+/// and still get the correct answer; based on empirical data, there are around half a million edges
+/// and only at most ten thousand of them are relevant to the MST.
+///
+/// If you care about absolute correctness, you can replace the `unreachable!()` at the end of
+/// `solve` with an implementation that handles the remaining edges.
+const CUTOFF_DISTANCE_SQUARE: u64 = 256_000_000;
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
@@ -17,47 +26,43 @@ pub fn solve() -> (impl Display, impl Display) {
                 .unwrap()
         })
         .collect_vec();
+    let boxes = &boxes;
 
-    // Assumption: Maximum distance to consider is less than 256 million.
-    let mut edge_buckets = vec![Vec::new(); 8];
-    for i in 0..boxes.len() {
-        for j in (i + 1)..boxes.len() {
-            let d = dist(boxes[i], boxes[j]);
-            let bucket_idx = (d / 1_000_000).ilog2() as usize;
-            if let Some(bucket) = edge_buckets.get_mut(bucket_idx) {
-                bucket.push((d, i as u16, j as u16));
-                continue;
-            }
-        }
-    }
+    let mut edges = (0..boxes.len())
+        .into_par_iter()
+        .flat_map_iter(|i| {
+            ((i + 1)..boxes.len()).filter_map(move |j| {
+                let d = dist(boxes[i], boxes[j]);
+                (d <= CUTOFF_DISTANCE_SQUARE).then_some((d, i as u16, j as u16))
+            })
+        })
+        .collect::<Vec<_>>();
+    edges.par_sort_unstable_by_key(|&(d, ..)| d);
 
     let mut circuits = QuickUnionUf::<UnionBySize>::new(boxes.len());
     let mut part1 = 0;
     let mut merges = 0;
     let mut connections_made = 0;
-    for mut edges in edge_buckets.into_iter() {
-        edges.sort_unstable_by_key(|e| e.0);
-        for pair in edges.into_iter() {
-            if connections_made == 1000 {
-                let mut size = vec![0usize; boxes.len()];
-                for i in 0..boxes.len() {
-                    size[circuits.find(i)] += 1;
-                }
-                size.sort_unstable();
-                size.reverse();
-                part1 = size[0] * size[1] * size[2];
+    for pair in edges {
+        if connections_made == 1000 {
+            let mut size = vec![0usize; boxes.len()];
+            for i in 0..boxes.len() {
+                size[circuits.find(i)] += 1;
             }
-            connections_made += 1;
+            size.sort_unstable();
+            size.reverse();
+            part1 = size[0] * size[1] * size[2];
+        }
+        connections_made += 1;
 
-            // ↓ Returns true if the two elements were in different sets
-            if circuits.union(pair.1 as usize, pair.2 as usize) {
-                merges += 1;
-            }
+        // ↓ Returns true if the two elements were in different sets
+        if circuits.union(pair.1 as usize, pair.2 as usize) {
+            merges += 1;
+        }
 
-            if merges == boxes.len() - 1 {
-                let part2 = boxes[pair.1 as usize].0 * boxes[pair.2 as usize].0;
-                return (part1, part2);
-            }
+        if merges == boxes.len() - 1 {
+            let part2 = boxes[pair.1 as usize].0 * boxes[pair.2 as usize].0;
+            return (part1, part2);
         }
     }
 
