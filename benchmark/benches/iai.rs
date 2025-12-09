@@ -15,4 +15,5 @@ doit!(
     day06: day06_solve,
     day07: day07_solve,
     day08: day08_solve,
+    day09: day09_solve,
 );
