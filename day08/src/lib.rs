@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
-use itertools::Itertools;
-use rayon::prelude::*;
-use union_find::*;
 use atoi::FromRadix10;
+use itertools::Itertools;
+use union_find::*;
 use wide::u64x4;
 
 #[inline]
@@ -19,45 +18,50 @@ pub fn solve() -> (impl Display, impl Display) {
         })
         .collect_vec();
 
-    let mut edges = Vec::with_capacity(boxes.len() * (boxes.len() - 1) / 2);
-    
+    // Assumption: Maximum distance to consider is less than 256 million.
+    let mut edge_buckets = vec![Vec::new(); 8];
     for i in 0..boxes.len() {
         for j in (i + 1)..boxes.len() {
             let d = dist(boxes[i], boxes[j]);
-            edges.push((d, i as u16, j as u16));
+            let bucket_idx = (d / 1_000_000).ilog2() as usize;
+            if let Some(bucket) = edge_buckets.get_mut(bucket_idx) {
+                bucket.push((d, i as u16, j as u16));
+                continue;
+            }
         }
     }
-
-    edges.par_sort_unstable_by_key(|(d, _, _)| *d);
 
     let mut circuits = QuickUnionUf::<UnionBySize>::new(boxes.len());
     let mut part1 = 0;
-    let mut part2 = 0;
     let mut merges = 0;
-
-    for (k, pair) in edges.into_iter().enumerate() {
-        if k == 1000 {
-            let mut size = vec![0usize; boxes.len()];
-            for i in 0..boxes.len() {
-                size[circuits.find(i)] += 1;
+    let mut connections_made = 0;
+    for mut edges in edge_buckets.into_iter() {
+        edges.sort_unstable_by_key(|e| e.0);
+        for pair in edges.into_iter() {
+            if connections_made == 1000 {
+                let mut size = vec![0usize; boxes.len()];
+                for i in 0..boxes.len() {
+                    size[circuits.find(i)] += 1;
+                }
+                size.sort_unstable();
+                size.reverse();
+                part1 = size[0] * size[1] * size[2];
             }
-            size.sort_unstable();
-            size.reverse();
-            part1 = size[0] * size[1] * size[2];
-        }
+            connections_made += 1;
 
-        // ↓ Returns true if the two elements were in different sets
-        if circuits.union(pair.1 as usize, pair.2 as usize) {
-            merges += 1;
-        }
+            // ↓ Returns true if the two elements were in different sets
+            if circuits.union(pair.1 as usize, pair.2 as usize) {
+                merges += 1;
+            }
 
-        if merges == boxes.len() - 1 {
-            part2 = boxes[pair.1 as usize].0 * boxes[pair.2 as usize].0;
-            break;
+            if merges == boxes.len() - 1 {
+                let part2 = boxes[pair.1 as usize].0 * boxes[pair.2 as usize].0;
+                return (part1, part2);
+            }
         }
     }
 
-    (part1, part2)
+    unreachable!()
 }
 
 #[inline(always)]
@@ -68,8 +72,8 @@ fn dist(a: (u64, u64, u64), b: (u64, u64, u64)) -> u64 {
     let b_vec = u64x4::from([b.0, b.1, b.2, 0]);
 
     // 2. Compute difference
-    // Note: SIMD integer subtraction is usually wrapping. 
-    // In modular arithmetic, (a - b)^2 is mathematically valid 
+    // Note: SIMD integer subtraction is usually wrapping.
+    // In modular arithmetic, (a - b)^2 is mathematically valid
     // even if (a - b) wraps around, so we don't need explicit abs_diff logic.
     let diff = a_vec - b_vec;
 
