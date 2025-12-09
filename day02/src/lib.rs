@@ -3,33 +3,99 @@ use std::fmt::Display;
 use atoi::FromRadix10;
 use rayon::prelude::*;
 
-fn is_valid_id_for_p1(n: u64) -> bool {
-    let l = n.ilog10() + 1;
-    if l % 2 != 0 {
-        return true;
+fn digits(n: u64) -> usize {
+    if n == 0 {
+        return 1;
     }
-    n % 10u64.pow(l / 2) != n / 10u64.pow(l / 2)
+    (n.ilog10() + 1) as usize
 }
 
-fn is_valid_id_for_p2(n: u64) -> bool {
-    let l = n.ilog10() + 1;
-    'outer: for k in 1..=l / 2 {
-        if l % k != 0 {
+// https://old.reddit.com/r/adventofcode/comments/1pbzqcx/2025_day_2_solutions/nrwn5ta/
+fn sum_repeated_in_range_p1(lower: u64, upper: u64) -> u64 {
+    let max_total_digits = digits(upper);
+    let mut result: u64 = 0;
+
+    let lower = lower as u128;
+    let upper = upper as u128;
+
+    // d is the number of digits in the repeated block, r is the number of blocks
+    for d in 1..=max_total_digits {
+        let r = 2;
+        // 10^d and 10^(d*r)
+        let pow10_d = 10u128.pow(d as u32);
+        let pow10_dr = 10u128.pow((d * r) as u32);
+
+        let f = (pow10_dr - 1) / (pow10_d - 1);
+
+        if f > upper {
+            continue; // even k = 1 would be too big
+        }
+
+        let min_k128 = 10u128.pow((d - 1) as u32);
+        let max_k128 = pow10_d - 1;
+
+        let k_lo = ((lower + f - 1) / f).max(min_k128);
+        let k_hi = (upper / f).min(max_k128);
+
+        if k_lo > k_hi {
             continue;
         }
-        let mask = 10u64.pow(k);
-        let first_part = n % mask;
-        let mut rest = n / mask;
-        while rest != 0 {
-            if rest % mask != first_part {
-                continue 'outer;
+
+        for k in k_lo..=k_hi {
+            let n = k * f;
+            if n >= lower && n <= upper {
+                result += n as u64;
             }
-            rest /= mask;
         }
-        return false;
     }
-    true
+
+    result
 }
+
+fn sum_repeated_in_range_p2(lower: u64, upper: u64) -> u64 {
+    let max_total_digits = digits(upper);
+    let mut candidates: Vec<u64> = Vec::new();
+
+    let lower128 = lower as u128;
+    let upper128 = upper as u128;
+
+    // d is the number of digits in the repeated block, r is the number of blocks
+    for d in 1..=max_total_digits {
+        for r in 2..=max_total_digits / d {
+            // 10^d and 10^(d*r)
+            let pow10_d = 10u128.pow(d as u32);
+            let pow10_dr = 10u128.pow((d * r) as u32);
+
+            let f = (pow10_dr - 1) / (pow10_d - 1);
+
+            if f > upper128 {
+                continue; // even k = 1 would be too big
+            }
+
+            let min_k128 = 10u128.pow((d - 1) as u32);
+            let max_k128 = pow10_d - 1;
+
+            let k_lo = ((lower128 + f - 1) / f).max(min_k128);
+            let k_hi = (upper128 / f).min(max_k128);
+
+            if k_lo > k_hi {
+                continue;
+            }
+
+            for k in k_lo..=k_hi {
+                let n = k * f;
+                if n >= lower128 && n <= upper128 {
+                    candidates.push(n as u64);
+                }
+            }
+        }
+    }
+
+    candidates.sort_unstable();
+    candidates.dedup();
+    candidates.into_iter().sum::<u64>()
+}
+
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
@@ -44,10 +110,7 @@ pub fn solve() -> (impl Display, impl Display) {
                     let (start, end) = line.split_once('-').unwrap();
                     let start = u64::from_radix_10(start.as_bytes()).0;
                     let end = u64::from_radix_10(end.as_bytes()).0;
-                    (start..=end)
-                        .into_par_iter()
-                        .filter(|&n| !is_valid_id_for_p1(n))
-                        .sum::<u64>()
+                    sum_repeated_in_range_p1(start, end)
                 })
                 .sum::<u64>()
         },
@@ -59,33 +122,9 @@ pub fn solve() -> (impl Display, impl Display) {
                     let (start, end) = line.split_once('-').unwrap();
                     let start = u64::from_radix_10(start.as_bytes()).0;
                     let end = u64::from_radix_10(end.as_bytes()).0;
-                    (start..=end)
-                        .into_par_iter()
-                        .filter(|&n| !is_valid_id_for_p2(n))
-                        .sum::<u64>()
+                    sum_repeated_in_range_p2(start, end)
                 })
                 .sum::<u64>()
         },
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_part1() {
-        assert_eq!((11..=22).filter(|&n| !is_valid_id_for_p1(n)).count(), 2);
-        assert_eq!((95..=115).filter(|&n| !is_valid_id_for_p1(n)).count(), 1);
-        assert_eq!((998..=1012).filter(|&n| !is_valid_id_for_p1(n)).count(), 1);
-        assert_eq!((1188511880..=1188511890).filter(|&n| !is_valid_id_for_p1(n)).count(), 1);
-    }
-
-    #[test]
-    fn test_part2() {
-        assert_eq!((11..=22).filter(|&n| !is_valid_id_for_p2(n)).count(), 2);
-        assert_eq!((95..=115).filter(|&n| !is_valid_id_for_p2(n)).count(), 2);
-        assert_eq!((998..=1012).filter(|&n| !is_valid_id_for_p2(n)).count(), 2);
-        assert_eq!((1188511880..=1188511890).filter(|&n| !is_valid_id_for_p2(n)).count(), 1);
-    }
 }
