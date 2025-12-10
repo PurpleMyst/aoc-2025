@@ -20,7 +20,7 @@ fn solve_part1(map: &Grid<u8>, start: (usize, usize)) -> i32 {
     let mut xs = FixedBitSet::with_capacity(map.cols());
     let mut new_xs = FixedBitSet::with_capacity(map.cols());
     xs.insert(start.1);
-    for y in 0..map.rows()-1 {
+    for y in 0..map.rows() - 1 {
         let next_y = y + 1;
         for x in xs.ones() {
             if map[(next_y, x)] == b'^' {

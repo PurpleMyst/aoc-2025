@@ -53,4 +53,3 @@ fn solve_part1(input: &'static str) -> usize {
         })
         .sum::<usize>()
 }
-
