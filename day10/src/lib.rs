@@ -3,8 +3,7 @@ use std::fmt::Display;
 use itertools::Itertools;
 use pathfinding::prelude::*;
 use rayon::prelude::*;
-use z3::ast::*;
-use z3::*;
+use z3::{ast::*, *};
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
