@@ -63,6 +63,7 @@ dependencies = [
  "day08",
  "day09",
  "day10",
+ "day11",
  "iai",
 ]
 
@@ -486,6 +487,14 @@ dependencies = [
  "nalgebra",
  "pathfinding",
  "z3",
+]
+
+[[package]]
+name = "day11"
+version = "0.1.0"
+dependencies = [
+ "memoize",
+ "rustc-hash",
 ]
 
 [[package]]
