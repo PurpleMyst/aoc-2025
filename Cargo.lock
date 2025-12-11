@@ -246,15 +246,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmake"
-version = "0.1.54"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7caa3f9de89ddbe2c607f4101924c5abec803763ae9534e4f4d7d8f84aa81f0"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "constant_time_eq"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2535,7 +2526,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3940bd12746da62352129e4bf4087fd360919b1bb0b88c59550b9761199b04ae"
 dependencies = [
  "bindgen",
- "cmake",
  "pkg-config",
  "reqwest",
  "serde_json",
