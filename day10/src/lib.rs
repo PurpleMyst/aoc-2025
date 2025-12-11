@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use itertools::Itertools;
 use pathfinding::prelude::*;
+use rayon::prelude::*;
 use z3::ast::*;
 use z3::*;
 
@@ -57,7 +58,7 @@ fn solve_part1(input: &'static str) -> u64 {
 
 fn solve_part2(input: &'static str) -> u64 {
     input
-        .lines()
+        .par_lines()
         .map(|line| {
             let opt = Optimize::new();
 
