@@ -55,6 +55,7 @@ dependencies = [
  "day09",
  "day10",
  "day11",
+ "day12",
  "iai",
 ]
 
@@ -465,6 +466,10 @@ dependencies = [
  "memoize",
  "rustc-hash",
 ]
+
+[[package]]
+name = "day12"
+version = "0.1.0"
 
 [[package]]
 name = "deflate64"
