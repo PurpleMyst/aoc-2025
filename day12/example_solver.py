@@ -65,9 +65,7 @@ def main() -> None:
     do_solve = partial(solve, blocksets, flat_blocksets)
 
     with ProcessPoolExecutor(max_workers=4) as pool:
-        futures = [
-            pool.submit(do_solve, case) for case in cases
-        ]
+        futures = [pool.submit(do_solve, case) for case in cases]
 
         part1 = 0
         for fut in tqdm(as_completed(futures), total=len(futures)):
