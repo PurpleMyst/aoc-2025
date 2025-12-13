@@ -1,58 +1,63 @@
 use std::fmt::Display;
 
 use itertools::Itertools;
-use pathfinding::prelude::*;
 use rayon::prelude::*;
 use z3::{ast::*, *};
 
 #[inline]
 pub fn solve() -> (impl Display, impl Display) {
     let input = include_str!("input.txt");
-    (solve_part1(input), solve_part2(input))
+    rayon::join(|| solve_part1(input), || solve_part2(input))
 }
 
-fn solve_part1(input: &'static str) -> u64 {
+fn bfs<I, F, F1>(start: &u16, successors: F, success: F1) -> usize
+where
+    F: Fn(&u16) -> I,
+    I: Iterator<Item = u16>,
+    F1: Fn(&u16) -> bool,
+{
+    let mut queue = std::collections::VecDeque::new();
+    let mut visited = [false; 1 << 16];
+    queue.push_back((*start, 0));
+    visited[*start as usize] = true;
+    while let Some((state, depth)) = queue.pop_front() {
+        if success(&state) {
+            return depth;
+        }
+        for next in successors(&state) {
+            if !visited[next as usize] {
+                visited[next as usize] = true;
+                queue.push_back((next, depth + 1));
+            }
+        }
+    }
+    unreachable!()
+}
+
+fn solve_part1(input: &'static str) -> usize {
     input
-        .lines()
+        .par_lines()
         .map(|line| {
             let mut parts = line.split(' ');
-            let ll = parts
-                .next()
-                .unwrap()
-                .strip_prefix("[")
-                .unwrap()
-                .strip_suffix("]")
-                .unwrap();
-
-            let lights = ll
+            let lights_str = parts.next().unwrap();
+            let lights_str = &lights_str[1..lights_str.len() - 1];
+            let lights = lights_str
                 .bytes()
-                .rev()
                 .enumerate()
                 .filter_map(|(i, b)| (b == b'#').then_some(1 << i))
                 .fold(0, |acc, mask| acc | mask);
             let _joltage = parts.next_back().unwrap();
             let buttons = parts
                 .map(|button| {
-                    button
-                        .strip_prefix("(")
-                        .unwrap()
-                        .strip_suffix(")")
-                        .unwrap()
-                        .split(',')
-                        .map(|n| 1 << (ll.len() as u16 - 1 - n.parse::<u16>().unwrap()))
+                    parse_int_list::<u16>(button)
+                        .map(|n| 1 << n)
                         .fold(0, |acc, mask| acc | mask)
                 })
                 .collect_vec();
 
-            dijkstra(
-                &0u16,
-                |&n| buttons.iter().map(move |&btn| (n ^ btn, 1)),
-                |&n| n == lights,
-            )
-            .unwrap()
-            .1
+            bfs(&0u16, |&n| buttons.iter().map(move |&btn| n ^ btn), |&n| n == lights)
         })
-        .sum::<u64>()
+        .sum::<usize>()
 }
 
 fn solve_part2(input: &'static str) -> u64 {
